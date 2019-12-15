@@ -35,7 +35,7 @@
 static usbd_device *otgfs_usb_init(void);
 static void otgfs_usb_set_address(usbd_device *, uint8_t);
 static void otgfs_usb_ep_setup(usbd_device *, uint8_t, uint8_t, uint16_t, void (*) (usbd_device *, uint8_t) );
-static void otgfs_usb_endpoints_reset(usbd_device *);
+static void otgfs_usb_reset(usbd_device *);
 static void otgfs_usb_ep_stall_set(usbd_device *, uint8_t, uint8_t);
 static uint8_t otgfs_usb_ep_stall_get(usbd_device *, uint8_t);
 static void otgfs_usb_ep_nak_set(usbd_device *, uint8_t, uint8_t);
@@ -50,7 +50,7 @@ const struct _usbd_driver otgfs_usb_driver = {
 	.init = otgfs_usb_init,
 	.set_address = otgfs_usb_set_address,
 	.ep_setup = otgfs_usb_ep_setup,
-	.ep_reset = otgfs_usb_endpoints_reset,
+	.ep_reset = otgfs_usb_reset,
 	.ep_stall_set = otgfs_usb_ep_stall_set,
 	.ep_stall_get = otgfs_usb_ep_stall_get,
 	.ep_nak_set = otgfs_usb_ep_nak_set,
@@ -83,9 +83,9 @@ static void otgfs_usb_core_init(void) {
 	//   – Global interrupt mask bit GINTMSK = 1
 	OTG_FS_GAHBCFG |= OTG_GAHBCFG_GINT;
 	//   – RxFIFO non-empty (RXFLVL bit in OTG_FS_GINTSTS)
-	OTG_FS_GINTMSK = OTG_GINTMSK_RXFLVLM;
+	OTG_FS_GINTSTS |= OTG_GINTSTS_RXFLVL;
 	//   – Periodic TxFIFO empty level
-	OTG_FS_GINTMSK = OTG_GINTSTS_PTXFE;
+	OTG_FS_GINTSTS |= OTG_GINTSTS_PTXFE;
 	// 2. Program the following fields in the OTG_FS_GUSBCFG register:
 	//   – HNP capable bit
 	OTG_FS_GUSBCFG |= OTG_GUSBCFG_HNPCAP;
@@ -133,6 +133,9 @@ static void otgfs_usb_device_init(void) {
 	// sensing in “B” device mode and supply the 5 volts across the pull-up
 	// resistor on the DP line.
 	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS;
+
+	// Force device mode
+	OTG_FS_GUSBCFG |= OTG_GUSBCFG_FDMOD;
 }
 
 static usbd_device *otgfs_usb_init(void) {
@@ -141,6 +144,8 @@ static usbd_device *otgfs_usb_init(void) {
 
 	otgfs_usb_core_init();
 	otgfs_usb_device_init();
+
+	OTG_FS_GCCFG |= OTG_GCCFG_PWRDWN;
 
 	// OTG_FS_GUSBCFG |= OTG_GUSBCFG_PHYSEL;
 
@@ -178,7 +183,12 @@ static usbd_device *otgfs_usb_init(void) {
 // otgfs_usb_set_address()
 
 static void otgfs_usb_set_address(usbd_device *usbd_dev, uint8_t addr) {
+	(void)usbd_dev;
+	(void)addr;
 	printf("otgfs_usb_set_address()\r\n");
+	printf("  TODO\r\n");
+	while(true);
+	return;
 	REBASE(OTG_DCFG) = (REBASE(OTG_DCFG) & ~OTG_DCFG_DAD) | (addr << 4);
 }
 
@@ -268,10 +278,10 @@ static void otgfs_usb_ep_setup(
 	}
 }
 
-// otgfs_usb_endpoints_reset()
+// otgfs_usb_reset()
 
-static void otgfs_usb_endpoints_reset(usbd_device *usbd_dev) {
-	printf("otgfs_usb_endpoints_reset()\r\n");
+static void otgfs_usb_reset(usbd_device *usbd_dev) {
+	printf("otgfs_usb_reset()\r\n");
 	printf("  TODO\r\n");
 	while(true);
 	return;
@@ -297,6 +307,7 @@ static void otgfs_usb_endpoints_reset(usbd_device *usbd_dev) {
 // otgfs_usb_ep_stall_set()
 
 static void otgfs_usb_ep_stall_set(usbd_device *usbd_dev, uint8_t addr, uint8_t stall) {
+	(void)usbd_dev;
 	printf("otgfs_usb_ep_stall_set()\r\n");
 	printf("  TODO\r\n");
 	while(true);
@@ -331,6 +342,7 @@ static void otgfs_usb_ep_stall_set(usbd_device *usbd_dev, uint8_t addr, uint8_t 
 // otgfs_usb_ep_stall_get()
 
 static uint8_t otgfs_usb_ep_stall_get(usbd_device *usbd_dev, uint8_t addr) {
+	(void)usbd_dev;
 	printf("otgfs_usb_ep_stall_get()\r\n");
 	printf("  TODO\r\n");
 	while(true);
@@ -373,6 +385,7 @@ static uint16_t otgfs_usb_ep_write_packet(
 	uint8_t addr,
 	const void *buf, uint16_t len
 ) {
+	(void)usbd_dev;
 	printf("otgfs_usb_ep_write_packet()\r\n");
 	printf("  TODO\r\n");
 	while(true);
@@ -492,8 +505,7 @@ static uint16_t otgfs_usb_ep_read_packet(
 
 // otgfs_usb_poll()
 
-static void otgfs_usb_endpoint_init_on_usb_reset(void)
-{
+static void otgfs_usb_endpoint_init_on_usb_reset(void) {
 	printf("    otgfs_usb_endpoint_init_on_usb_reset()\r\n");
 	// 22.17.5 Device programming model
 	//
@@ -502,42 +514,46 @@ static void otgfs_usb_endpoint_init_on_usb_reset(void)
 	// 1. Set the NAK bit for all OUT endpoints
 	//   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints)
 	for(int i=1 ; i <=3 ; i++)
-		REBASE(OTG_DOEPCTL(i)) |= OTG_DIEPCTL0_SNAK;
+		OTG_FS_DOEPCTL(i) |= OTG_DIEPCTL0_SNAK;
 	// 2. Unmask the following interrupt bits
 	//   – INEP0 = 1 in OTG_FS_DAINTMSK (control 0 IN endpoint)
 	OTG_FS_DAINTMSK |= (1<<0);
 	//   – OUTEP0 = 1 in OTG_FS_DAINTMSK (control 0 OUT endpoint)
 	OTG_FS_DAINTMSK |= (1<<16);
 	//   – STUP = 1 in DOEPMSK
-	REBASE(OTG_DOEPMSK) |= OTG_DOEPMSK_STUPM;
+	OTG_FS_DOEPMSK |= OTG_DOEPMSK_STUPM;
 	//   – XFRC = 1 in DOEPMSK
-	REBASE(OTG_DOEPMSK) |= OTG_DOEPMSK_XFRCM;
+	OTG_FS_DOEPMSK |= OTG_DOEPMSK_XFRCM;
 	//   – XFRC = 1 in DIEPMSK
-	REBASE(OTG_DIEPMSK) |= OTG_DIEPMSK_XFRCM;
+	OTG_FS_DIEPMSK |= OTG_DIEPMSK_XFRCM;
 	//   – TOC = 1 in DIEPMSK
-	REBASE(OTG_DIEPMSK) |= OTG_DIEPMSK_TOM;
+	OTG_FS_DIEPMSK |= OTG_DIEPMSK_TOM;
 	// 3. Set up the Data FIFO RAM for each of the FIFOs
 	//   – Program the OTG_FS_GRXFSIZ register, to be able to receive control
 	//     OUT data and setup data. If thresholding is not enabled, at a
 	//     minimum, this must be equal to 1 max packet size of control endpoint
 	//     0 + 2 words (for the status of the control OUT data packet) + 10
 	//     words (for setup packets).
-	OTG_FS_GRXFSIZ = otgfs_usb_driver.rx_fifo_size;
-	_usbd_dev.fifo_mem_top = otgfs_usb_driver.rx_fifo_size;
+	OTG_FS_GRXFSIZ = otgfs_usb_driver.rx_fifo_size & 0xFF;
 	//   – Program the OTG_FS_TX0FSIZ register (depending on the FIFO number
 	//     chosen) to be able to transmit control IN data. At a minimum, this
 	//     must be equal to 1 max packet size of control endpoint 0.
-
+	// TODO https://github.com/wookey-project/driver-stm32f4xx-usb/blob/master/stm32f4xx_usb_fs.c#L1216
 	// 4. Program the following fields in the endpoint-specific registers for
 	//   control OUT endpoint 0 to receive a SETUP packet
 	//   – STUPCNT = 3 in OTG_FS_DOEPTSIZ0 (to receive up to 3 back-to-back
 	//     SETUP packets)
 	OTG_FS_DOEPTSIZ0 |= OTG_DIEPSIZ0_STUPCNT_3;
 	// At this point, all initialization required to receive SETUP packets is done.
+
+	_usbd_dev.current_address = 0;
+	_usbd_dev.current_config = 0;
+	// _usbd_dev.fifo_mem_top = otgfs_usb_driver.rx_fifo_size;
 }
 
-static void otgfs_usb_endpoint_init_on_enumeration_completion(void)
-{
+static void otgfs_usb_endpoint_init_on_enumeration_completion(void) {
+	printf("    otgfs_usb_endpoint_init_on_enumeration_completion()\r\n");
+	uint16_t max_size;
 	// 22.17.5 Device programming model
 	//
 	// Endpoint initialization on enumeration completion
@@ -547,9 +563,122 @@ static void otgfs_usb_endpoint_init_on_enumeration_completion(void)
 	// 2. Program the MPSIZ field in OTG_FS_DIEPCTL0 to set the maximum packet
 	// size. This step configures control endpoint 0. The maximum packet size
 	// for a control endpoint depends on the enumeration speed.
+	max_size = _usbd_dev.desc->bMaxPacketSize0;
+	if (max_size >= 64) {
+		REBASE(OTG_DIEPCTL0) = OTG_DIEPCTL0_MPSIZ_64;
+	} else if (max_size >= 32) {
+		REBASE(OTG_DIEPCTL0) = OTG_DIEPCTL0_MPSIZ_32;
+	} else if (max_size >= 16) {
+		REBASE(OTG_DIEPCTL0) = OTG_DIEPCTL0_MPSIZ_16;
+	} else {
+		REBASE(OTG_DIEPCTL0) = OTG_DIEPCTL0_MPSIZ_8;
+	}
+}
+
+static void otgfs_usb_packet_read(void) {
+	uint32_t grxstsp;
+	uint8_t ep;
+	printf("    otgfs_usb_packet_read()\r\n");
+
+	// 22.17.6 Operational model
+
+	// SETUP and OUT data transfers
+	// This section describes the internal data flow and application-level
+	// operations during data OUT transfers and SETUP transactions.
+	// • Packet read
+	// This section describes how to read packets (OUT data and SETUP packets)
+	// from the receive FIFO.
+	// 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register), the
+	//   application must read the Receive status pop register (OTG_FS_GRXSTSP).
+	grxstsp = OTG_FS_GRXSTSP;
+	ep = grxstsp & OTG_GRXSTSP_EPNUM_MASK;
+	// 2. The application can mask the RXFLVL interrupt (in OTG_FS_GINTSTS) by
+	//   writing to RXFLVL = 0 (in OTG_FS_GINTMSK), until it has read the packet
+	//   from the receive FIFO.
+	OTG_FS_GINTMSK &= ~(OTG_GINTMSK_RXFLVLM);
+	// 3. If the received packet’s byte count is not 0, the byte count amount of
+	//   data is popped from the receive Data FIFO and stored in memory. If the
+	//   received packet byte count is 0, no data is popped from the receive data
+	//   FIFO.
+	_usbd_dev.rxbcnt = (grxstsp & OTG_GRXSTSP_BCNT_MASK) >> 4;
+	// 4. The receive FIFO’s packet status readout indicates one of the
+	//   following:
+	switch(grxstsp & OTG_GRXSTSP_PKTSTS_MASK) {
+		// 	  a) Global OUT NAK pattern:
+		//      PKTSTS = Global OUT NAK,
+		//      DPID = Don’t Care (0b00).
+		//      BCNT = 0x000,
+		//      EPNUM = Don’t Care (0x0),
+		//      These data indicate that the global OUT NAK bit has taken effect.
+		case OTG_GRXSTSP_PKTSTS_GOUTNAK:
+			printf("      OTG_GRXSTSP_PKTSTS_GOUTNAK\r\n");
+			printf("  TODO\r\n");
+			while(true);
+			break;
+		// 	  b) SETUP packet pattern:
+		//      PKTSTS = SETUP,
+		//      DPID = D0.
+		//      BCNT = 0x008,
+		//      EPNUM = Control EP Num,
+		//      These data indicate that a SETUP packet for the specified endpoint
+		//      is now available for reading from the receive FIFO.
+		case OTG_GRXSTSP_PKTSTS_SETUP:
+			printf("      OTG_GRXSTSP_PKTSTS_SETUP\r\n");
+			otgfs_usb_ep_read_packet(&_usbd_dev, ep, &_usbd_dev.control_state.req, 8);
+			break;
+		//    c) Setup stage done pattern:
+		//      PKTSTS = Setup Stage Done,
+		//      DPID = Don’t Care (0b00).
+		//      BCNT = 0x0,
+		//      EPNUM = Control EP Num,
+		//      These data indicate that the Setup stage for the specified endpoint
+		//      has completed and the Data stage has started. After this entry is
+		//      popped from the receive FIFO, the core asserts a Setup interrupt on
+		//      the specified control OUT endpoint.
+		case OTG_GRXSTSP_PKTSTS_SETUP_COMP:
+			printf("      OTG_GRXSTSP_PKTSTS_SETUP_COMP\r\n");
+			printf("  TODO\r\n");
+			while(true);
+			break;
+		//    d) Data OUT packet pattern:
+		//      PKTSTS = DataOUT,
+		//      DPID = Actual Data PID.
+		//      BCNT = size of the received data OUT packet (0 ≤ BCNT ≤ 1 024),
+		//      EPNUM = EPNUM on which the packet was received,
+		case OTG_GRXSTSP_PKTSTS_OUT:
+			printf("      OTG_GRXSTSP_PKTSTS_OUT\r\n");
+			printf("  TODO\r\n");
+			while(true);
+			break;
+		//    e) Data transfer completed pattern:
+		//      PKTSTS = Data OUT Transfer Done,
+		//      DPID = Don’t Care (0b00).
+		//      BCNT = 0x0,
+		//      EPNUM = OUT EP Num on which the data transfer is complete,
+		//      These data indicate that an OUT data transfer for the specified OUT
+		//      endpoint has completed. After this entry is popped from the receive
+		//      FIFO, the core asserts a Transfer Completed interrupt on the
+		//      specified OUT endpoint.
+		case OTG_GRXSTSP_PKTSTS_OUT_COMP:
+			printf("      OTG_GRXSTSP_PKTSTS_OUT_COMP\r\n");
+			printf("  TODO\r\n");
+			while(true);
+			break;
+	}
+	// 5. After the data payload is popped from the receive FIFO, the RXFLVL
+	//   interrupt (OTG_FS_GINTSTS) must be unmasked.
+	OTG_FS_GINTMSK |= OTG_GINTMSK_RXFLVLM;
+	// 6. Steps 1–5 are repeated every time the application detects assertion of
+	//   the interrupt line due to RXFLVL in OTG_FS_GINTSTS. Reading an empty
+	//   receive FIFO can result in undefined core behavior.
 }
 
 static void otgfs_usb_flush_txfifo(usbd_device *usbd_dev, int ep) {
+	(void)usbd_dev;
+	printf("otgfs_usb_flush_txfifo()\r\n");
+	printf("  TODO\r\n");
+	while(true);
+	return;
 	uint32_t fifo;
 	/* set IN endpoint NAK */
 	REBASE(OTG_DIEPCTL(ep)) |= OTG_DIEPCTL0_SNAK;
@@ -574,59 +703,59 @@ static void otgfs_usb_flush_txfifo(usbd_device *usbd_dev, int ep) {
 
 static void otgfs_usb_poll(usbd_device *usbd_dev) {
 	uint32_t gintsts;
+	int i;
 
 	// printf("otgfs_usb_poll()\r\n");
-	gintsts = REBASE(OTG_GINTSTS);
-
-	if(gintsts & OTG_GINTSTS_USBRST) {
-		printf("  OTG_GINTSTS_USBRST\r\n");
-		otgfs_usb_endpoint_init_on_usb_reset();
-		REBASE(OTG_GINTSTS) |= OTG_GINTSTS_USBRST;
-		return;
-	}
-
-	if (gintsts & OTG_GINTSTS_ENUMDNE) {
-		printf("  OTG_GINTSTS_ENUMDNE\r\n");
-		otgfs_usb_endpoint_init_on_enumeration_completion();
-		REBASE(OTG_GINTSTS) = OTG_GINTSTS_ENUMDNE;
-		return;
-	}
-	return;
+	gintsts = OTG_FS_GINTSTS;
 
 
-	// printf("  TODO\r\n");
-	// while(true);
-	return;
 	// 22.17.3
 	//
 	// 4. Wait for the USBRST interrupt in OTG_FS_GINTSTS. It indicates that a
 	// reset has been detected on the USB that lasts for about 10 ms on
 	// receiving this interrupt.
+	if(gintsts & OTG_GINTSTS_USBRST) {
+		printf("  OTG_GINTSTS_USBRST\r\n");
+		otgfs_usb_endpoint_init_on_usb_reset();
+		OTG_FS_GINTSTS |= OTG_GINTSTS_USBRST;
+		return;
+	}
+
+	// 22.17.3
 	//
 	// Wait for the ENUMDNE interrupt in OTG_FS_GINTSTS. This interrupt
 	// indicates the end of reset on the USB. On receiving this interrupt, the
 	// application must read the OTG_FS_DSTS register to determine the
 	// enumeration speed and perform the steps listed in Endpoint initialization
 	// on enumeration completion on page 781.
-	otgfs_usb_endpoint_init_on_enumeration_completion();
+	if (gintsts & OTG_GINTSTS_ENUMDNE) {
+		printf("  OTG_GINTSTS_ENUMDNE\r\n");
+		otgfs_usb_endpoint_init_on_enumeration_completion();
+		// _usbd_dev->driver->set_address(usbd_dev, 0);
+		if (usbd_dev->user_callback_reset) {
+			usbd_dev->user_callback_reset();
+		}
+		OTG_FS_GINTSTS |= OTG_GINTSTS_ENUMDNE;
+		return;
+	}
+
 	// At this point, the device is ready to accept SOF packets and perform
 	// control transfers on control endpoint 0.
 
-	return;
+	// 22.17.6 Operational model
 
-	/////////////////////////////////////
-
-	// uint32_t gintsts = REBASE(OTG_GINTSTS);
-	int i;
-
-	if (gintsts & OTG_GINTSTS_ENUMDNE) {
-		printf("  OTG_GINTSTS_ENUMDNE\r\n");
-		/* Handle USB RESET condition. */
-		REBASE(OTG_GINTSTS) = OTG_GINTSTS_ENUMDNE;
-		usbd_dev->fifo_mem_top = usbd_dev->driver->rx_fifo_size;
-		_usbd_reset(usbd_dev);
+	// SETUP and OUT data transfers
+	// This section describes the internal data flow and application-level
+	// operations during data OUT transfers and SETUP transactions.
+	// • Packet read
+	if (gintsts & OTG_GINTSTS_RXFLVL) {
+		printf("  OTG_GINTSTS_RXFLVL\r\n");
+		otgfs_usb_packet_read();
 		return;
 	}
+
+	return;
+	/////////////////////////////////////
 
 	/*
 	 * There is no global interrupt flag for transmit complete.
@@ -734,6 +863,8 @@ static void otgfs_usb_poll(usbd_device *usbd_dev) {
 // otgfs_usb_disconnect()
 
 static void otgfs_usb_disconnect(usbd_device *usbd_dev, bool disconnected) {
+	(void)usbd_dev;
+	(void)disconnected;
 	printf("otgfs_usb_disconnect()\r\n");
 	printf("  TODO\r\n");
 	while(true);
