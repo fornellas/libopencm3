@@ -184,11 +184,12 @@ static usbd_device *otgfs_usb_init(void) {
 
 static void otgfs_usb_set_address(usbd_device *usbd_dev, uint8_t addr) {
 	(void)usbd_dev;
-	(void)addr;
 	printf("otgfs_usb_set_address()\r\n");
+	printf("  addr %d\r\n", addr);
+
 	printf("  TODO\r\n");
 	while(true);
-	return;
+
 	REBASE(OTG_DCFG) = (REBASE(OTG_DCFG) & ~OTG_DCFG_DAD) | (addr << 4);
 }
 
@@ -235,7 +236,7 @@ static void otgfs_usb_ep_setup(
 			(max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DOEPTSIZ(0)) = usbd_dev->doeptsiz[0];
 		REBASE(OTG_DOEPCTL(0)) |=
-		    OTG_DOEPCTL0_EPENA | OTG_DIEPCTL0_SNAK;
+			OTG_DOEPCTL0_EPENA | OTG_DIEPCTL0_SNAK;
 
 		REBASE(OTG_GNPTXFSIZ) = ((max_size / 4) << 16) |
 					 usbd_dev->driver->rx_fifo_size;
@@ -247,19 +248,19 @@ static void otgfs_usb_ep_setup(
 
 	if (dir) {
 		REBASE(OTG_DIEPTXF(addr)) = ((max_size / 4) << 16) |
-					     usbd_dev->fifo_mem_top;
+						 usbd_dev->fifo_mem_top;
 		usbd_dev->fifo_mem_top += max_size / 4;
 
 		REBASE(OTG_DIEPTSIZ(addr)) =
-		    (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+			(max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DIEPCTL(addr)) |=
-		    OTG_DIEPCTL0_EPENA | OTG_DIEPCTL0_SNAK | (type << 18)
-		    | OTG_DIEPCTL0_USBAEP | OTG_DIEPCTLX_SD0PID
-		    | (addr << 22) | max_size;
+			OTG_DIEPCTL0_EPENA | OTG_DIEPCTL0_SNAK | (type << 18)
+			| OTG_DIEPCTL0_USBAEP | OTG_DIEPCTLX_SD0PID
+			| (addr << 22) | max_size;
 
 		if (callback) {
 			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_IN] =
-			    (void *)callback;
+				(void *)callback;
 		}
 	}
 
@@ -268,12 +269,12 @@ static void otgfs_usb_ep_setup(
 				 (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DOEPTSIZ(addr)) = usbd_dev->doeptsiz[addr];
 		REBASE(OTG_DOEPCTL(addr)) |= OTG_DOEPCTL0_EPENA |
-		    OTG_DOEPCTL0_USBAEP | OTG_DIEPCTL0_CNAK |
-		    OTG_DOEPCTLX_SD0PID | (type << 18) | max_size;
+			OTG_DOEPCTL0_USBAEP | OTG_DIEPCTL0_CNAK |
+			OTG_DOEPCTLX_SD0PID | (type << 18) | max_size;
 
 		if (callback) {
 			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] =
-			    (void *)callback;
+				(void *)callback;
 		}
 	}
 }
@@ -283,8 +284,10 @@ static void otgfs_usb_ep_setup(
 static void otgfs_usb_reset(usbd_device *usbd_dev) {
 	printf("otgfs_usb_reset()\r\n");
 	printf("  TODO\r\n");
+
 	while(true);
 	return;
+
 	int i;
 	/* The core resets the endpoints automatically on reset. */
 	usbd_dev->fifo_mem_top = usbd_dev->fifo_mem_top_ep0;
@@ -301,7 +304,7 @@ static void otgfs_usb_reset(usbd_device *usbd_dev) {
 
 	/* Flush all tx/rx fifos */
 	REBASE(OTG_GRSTCTL) = OTG_GRSTCTL_TXFFLSH | OTG_GRSTCTL_TXFNUM_ALL
-			      | OTG_GRSTCTL_RXFFLSH;
+				  | OTG_GRSTCTL_RXFFLSH;
 }
 
 // otgfs_usb_ep_stall_set()
@@ -361,9 +364,9 @@ static uint8_t otgfs_usb_ep_stall_get(usbd_device *usbd_dev, uint8_t addr) {
 
 static void otgfs_usb_ep_nak_set(usbd_device *usbd_dev, uint8_t addr, uint8_t nak) {
 	printf("otgfs_usb_ep_nak_set()\r\n");
-	printf("  TODO\r\n");
-	while(true);
-	return;
+	printf("  addr %d\r\n", addr);
+	printf("  nak %d\r\n", nak);
+
 	/* It does not make sense to force NAK on IN endpoints. */
 	if (addr & 0x80) {
 		return;
@@ -387,9 +390,21 @@ static uint16_t otgfs_usb_ep_write_packet(
 ) {
 	(void)usbd_dev;
 	printf("otgfs_usb_ep_write_packet()\r\n");
+	printf("  addr %d\r\n", addr);
+	printf("  len %d\r\n", len);
+
+	uint8_t *buf8 = (uint8_t *)buf;
+	printf("             ");
+	for(int i=0; i < len ; i++) {
+		printf(" 0x%02X", *(buf8 + i));
+	}
+	printf("\r\n");
+
+
 	printf("  TODO\r\n");
 	while(true);
-	return 0;
+
+
 	const uint32_t *buf32 = buf;
 	#if defined(__ARM_ARCH_6M__)
 	const uint8_t *buf8 = buf;
@@ -407,7 +422,7 @@ static uint16_t otgfs_usb_ep_write_packet(
 	/* Enable endpoint for transmission. */
 	REBASE(OTG_DIEPTSIZ(addr)) = OTG_DIEPSIZ0_PKTCNT | len;
 	REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_EPENA |
-				     OTG_DIEPCTL0_CNAK;
+					 OTG_DIEPCTL0_CNAK;
 
 	/* Copy buffer to endpoint FIFO, note - memcpy does not work.
 	 * ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
@@ -443,62 +458,26 @@ static uint16_t otgfs_usb_ep_read_packet(
 	void *buf,
 	uint16_t len
 ) {
-	printf("otgfs_usb_ep_read_packet()\r\n");
-	printf("  TODO\r\n");
-	while(true);
-	return 0;
-	int i;
 	uint32_t *buf32 = buf;
-	#if defined(__ARM_ARCH_6M__)
+
+	(void)usbd_dev;
+
+	printf("          otgfs_usb_ep_read_packet()\r\n");
+	printf("            addr %d\r\n", addr);
+	printf("            len %d\r\n", len);
+
+	// TODO The original function is way more complex, but this seems to work
+	// just fine
+	for(int i=0 ; i < len ; i+=4) {
+		*buf32++ = REBASE(OTG_FIFO(addr));
+	}
+
 	uint8_t *buf8 = buf;
-	uint32_t word32;
-	#endif /* defined(__ARM_ARCH_6M__) */
-	uint32_t extra;
-
-	/* We do not need to know the endpoint address since there is only one
-	 * receive FIFO for all endpoints.
-	 */
-	(void) addr;
-	len = MIN(len, usbd_dev->rxbcnt);
-
-	/* ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
-	#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
-	for (i = len; i >= 4; i -= 4) {
-		*buf32++ = REBASE(OTG_FIFO(0));
-		usbd_dev->rxbcnt -= 4;
+	printf("             ");
+	for(int i=0; i < len ; i++) {
+		printf(" 0x%02X", *(buf8 + i));
 	}
-	#endif /* defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__) */
-
-	#if defined(__ARM_ARCH_6M__)
-	/* Take care of word-aligned and non-word-aligned buffers */
-	if (((uint32_t)buf8 & 0x3) == 0) {
-		for (i = len; i >= 4; i -= 4) {
-			*buf32++ = REBASE(OTG_FIFO(0));
-			usbd_dev->rxbcnt -= 4;
-		}
-	} else {
-		for (i = len; i >= 4; i -= 4) {
-			word32 = REBASE(OTG_FIFO(0));
-			memcpy(buf8, &word32, 4);
-			usbd_dev->rxbcnt -= 4;
-			buf8 += 4;
-		}
-		/* buf32 needs to be updated as it is used for extra */
-		buf32 = (uint32_t *)buf8;
-	}
-	#endif /* defined(__ARM_ARCH_6M__) */
-
-	if (i) {
-		extra = REBASE(OTG_FIFO(0));
-		/* we read 4 bytes from the fifo, so update rxbcnt */
-		if (usbd_dev->rxbcnt < 4) {
-			/* Be careful not to underflow (rxbcnt is unsigned) */
-			usbd_dev->rxbcnt = 0;
-		} else {
-			usbd_dev->rxbcnt -= 4;
-		}
-		memcpy(buf32, &extra, i);
-	}
+	printf("\r\n");
 
 	return len;
 }
@@ -575,10 +554,12 @@ static void otgfs_usb_endpoint_init_on_enumeration_completion(void) {
 	}
 }
 
-static void otgfs_usb_packet_read(void) {
+static void otgfs_usb_setup_and_out_data_transfers(usbd_device *usbd_dev) {
 	uint32_t grxstsp;
-	uint8_t ep;
-	printf("    otgfs_usb_packet_read()\r\n");
+	uint8_t endpoint_number;
+	uint16_t byte_count;
+	uint8_t data_pid;
+	printf("    otgfs_usb_setup_and_out_data_transfers()\r\n");
 
 	// 22.17.6 Operational model
 
@@ -591,7 +572,12 @@ static void otgfs_usb_packet_read(void) {
 	// 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register), the
 	//   application must read the Receive status pop register (OTG_FS_GRXSTSP).
 	grxstsp = OTG_FS_GRXSTSP;
-	ep = grxstsp & OTG_GRXSTSP_EPNUM_MASK;
+	endpoint_number = grxstsp & OTG_GRXSTSP_EPNUM_MASK;
+	printf("      endpoint_number %d\r\n", endpoint_number);
+	byte_count = (grxstsp & OTG_GRXSTSP_BCNT_MASK) >> 4;
+	printf("      byte_count %d\r\n", byte_count);
+	data_pid = (grxstsp & OTG_GRXSTSP_DPID_MASK) >> 15;
+	printf("      data_pid %d\r\n", data_pid);
 	// 2. The application can mask the RXFLVL interrupt (in OTG_FS_GINTSTS) by
 	//   writing to RXFLVL = 0 (in OTG_FS_GINTMSK), until it has read the packet
 	//   from the receive FIFO.
@@ -600,7 +586,7 @@ static void otgfs_usb_packet_read(void) {
 	//   data is popped from the receive Data FIFO and stored in memory. If the
 	//   received packet byte count is 0, no data is popped from the receive data
 	//   FIFO.
-	_usbd_dev.rxbcnt = (grxstsp & OTG_GRXSTSP_BCNT_MASK) >> 4;
+
 	// 4. The receive FIFO’s packet status readout indicates one of the
 	//   following:
 	switch(grxstsp & OTG_GRXSTSP_PKTSTS_MASK) {
@@ -624,7 +610,17 @@ static void otgfs_usb_packet_read(void) {
 		//      is now available for reading from the receive FIFO.
 		case OTG_GRXSTSP_PKTSTS_SETUP:
 			printf("      OTG_GRXSTSP_PKTSTS_SETUP\r\n");
-			otgfs_usb_ep_read_packet(&_usbd_dev, ep, &_usbd_dev.control_state.req, 8);
+			if((grxstsp & OTG_GRXSTSP_DPID_MASK) != OTG_GRXSTSP_DPID_DATA0)
+				// TODO flush buffer
+				break;
+			if(byte_count != sizeof(usbd_dev->control_state.req))
+				break;
+			otgfs_usb_ep_read_packet(
+				&_usbd_dev,
+				endpoint_number,
+				&(usbd_dev->control_state.req),
+				byte_count
+			);
 			break;
 		//    c) Setup stage done pattern:
 		//      PKTSTS = Setup Stage Done,
@@ -739,6 +735,14 @@ static void otgfs_usb_poll(usbd_device *usbd_dev) {
 		return;
 	}
 
+	if(OTG_FS_DOEPINT(0) & OTG_DOEPINTX_STUP) {
+		printf("  OTG_FS_DOEPINTx STUP\r\n");
+		uint8_t setup_packet_count;
+		setup_packet_count = (OTG_FS_DOEPTSIZ0 & OTG_DIEPSIZ0_STUPCNT_MASK) >> 29;
+		printf("    setup_packet_count %d\r\n", setup_packet_count);
+		OTG_FS_DOEPINT(0) |= OTG_DOEPINTX_STUP;
+	}
+
 	// At this point, the device is ready to accept SOF packets and perform
 	// control transfers on control endpoint 0.
 
@@ -748,9 +752,12 @@ static void otgfs_usb_poll(usbd_device *usbd_dev) {
 	// This section describes the internal data flow and application-level
 	// operations during data OUT transfers and SETUP transactions.
 	// • Packet read
+	// This section describes how to read packets (OUT data and SETUP packets)
+	// from the receive FIFO.
+	// 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register) (...)
 	if (gintsts & OTG_GINTSTS_RXFLVL) {
 		printf("  OTG_GINTSTS_RXFLVL\r\n");
-		otgfs_usb_packet_read();
+		otgfs_usb_setup_and_out_data_transfers(usbd_dev);
 		return;
 	}
 
@@ -765,7 +772,7 @@ static void otgfs_usb_poll(usbd_device *usbd_dev) {
 		if (REBASE(OTG_DIEPINT(i)) & OTG_DIEPINTX_XFRC) {
 			/* Transfer complete. */
 			if (usbd_dev->user_callback_ctr[i]
-						       [USB_TRANSACTION_IN]) {
+							   [USB_TRANSACTION_IN]) {
 				usbd_dev->user_callback_ctr[i]
 					[USB_TRANSACTION_IN](usbd_dev, i);
 			}
@@ -795,7 +802,7 @@ static void otgfs_usb_poll(usbd_device *usbd_dev) {
 		}
 
 		if ((pktsts != OTG_GRXSTSP_PKTSTS_OUT) &&
-		    (pktsts != OTG_GRXSTSP_PKTSTS_SETUP)) {
+			(pktsts != OTG_GRXSTSP_PKTSTS_SETUP)) {
 			return;
 		}
 
@@ -866,9 +873,10 @@ static void otgfs_usb_disconnect(usbd_device *usbd_dev, bool disconnected) {
 	(void)usbd_dev;
 	(void)disconnected;
 	printf("otgfs_usb_disconnect()\r\n");
+
 	printf("  TODO\r\n");
 	while(true);
-	return;
+
 	if (disconnected) {
 		REBASE(OTG_DCTL) |= OTG_DCTL_SDIS;
 	} else {
