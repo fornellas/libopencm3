@@ -187,7 +187,7 @@ static void otgfs_usb_set_address(usbd_device *usbd_dev, uint8_t addr) {
 	printf("otgfs_usb_set_address()\r\n");
 	printf("  addr %d\r\n", addr);
 
-	printf("  TODO\r\n");
+	printf("  TODO otgfs_usb_set_address\r\n");
 	while(true);
 
 	REBASE(OTG_DCFG) = (REBASE(OTG_DCFG) & ~OTG_DCFG_DAD) | (addr << 4);
@@ -203,9 +203,14 @@ static void otgfs_usb_ep_setup(
 	void (*callback) (usbd_device *usbd_dev, uint8_t ep)
 ) {
 	printf("otgfs_usb_ep_setup()\r\n");
-	printf("  TODO\r\n");
+	printf("  addr %d\r\n", addr);
+	printf("  type %d\r\n", type);
+	printf("  max_size %d\r\n", max_size);
+	printf("  TODO otgfs_usb_ep_setup\r\n");
+
 	while(true);
 	return;
+
 	/*
 	 * Configure endpoint address and type. Allocate FIFO memory for
 	 * endpoint. Install callback function.
@@ -283,7 +288,7 @@ static void otgfs_usb_ep_setup(
 
 static void otgfs_usb_reset(usbd_device *usbd_dev) {
 	printf("otgfs_usb_reset()\r\n");
-	printf("  TODO\r\n");
+	printf("  TODO otgfs_usb_reset\r\n");
 
 	while(true);
 	return;
@@ -312,9 +317,11 @@ static void otgfs_usb_reset(usbd_device *usbd_dev) {
 static void otgfs_usb_ep_stall_set(usbd_device *usbd_dev, uint8_t addr, uint8_t stall) {
 	(void)usbd_dev;
 	printf("otgfs_usb_ep_stall_set()\r\n");
-	printf("  TODO\r\n");
+	printf("  TODO otgfs_usb_ep_stall_set\r\n");
+
 	while(true);
 	return;
+
 	if (addr == 0) {
 		if (stall) {
 			REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_STALL;
@@ -347,9 +354,11 @@ static void otgfs_usb_ep_stall_set(usbd_device *usbd_dev, uint8_t addr, uint8_t 
 static uint8_t otgfs_usb_ep_stall_get(usbd_device *usbd_dev, uint8_t addr) {
 	(void)usbd_dev;
 	printf("otgfs_usb_ep_stall_get()\r\n");
-	printf("  TODO\r\n");
+	printf("  TODO otgfs_usb_ep_stall_get\r\n");
+
 	while(true);
 	return 0;
+
 	/* Return non-zero if STALL set. */
 	if (addr & 0x80) {
 		return (REBASE(OTG_DIEPCTL(addr & 0x7f)) &
@@ -388,7 +397,6 @@ static uint16_t otgfs_usb_ep_write_packet(
 	uint8_t addr,
 	const void *buf, uint16_t len
 ) {
-	(void)usbd_dev;
 	printf("otgfs_usb_ep_write_packet()\r\n");
 	printf("  addr %d\r\n", addr);
 	printf("  len %d\r\n", len);
@@ -400,53 +408,83 @@ static uint16_t otgfs_usb_ep_write_packet(
 	}
 	printf("\r\n");
 
-
-	printf("  TODO\r\n");
-	while(true);
-
-
+	uint8_t packet_count;
+	uint8_t max_packet_size;
 	const uint32_t *buf32 = buf;
-	#if defined(__ARM_ARCH_6M__)
-	const uint8_t *buf8 = buf;
-	uint32_t word32;
-	#endif /* defined(__ARM_ARCH_6M__) */
-	int i;
 
-	addr &= 0x7F;
+	(void)usbd_dev;
 
-	/* Return if endpoint is already enabled. */
-	if (REBASE(OTG_DIEPTSIZ(addr)) & OTG_DIEPSIZ0_PKTCNT) {
-		return 0;
+	// 22.17.6 Operational model
+
+	// Generic non-periodic IN data transfers
+
+	// Application programming sequence
+
+	// 1. Program the OTG_FS_DIEPTSIZx register with the transfer size and
+	// corresponding packet count.
+	if(addr == 0) {
+		switch(REBASE(OTG_DIEPCTL0) & OTG_DIEPCTL0_MPSIZ_MASK) {
+			case OTG_DIEPCTL0_MPSIZ_64:
+				max_packet_size = 64;
+				break;
+			case OTG_DIEPCTL0_MPSIZ_32:
+				max_packet_size = 32;
+				break;
+			case OTG_DIEPCTL0_MPSIZ_16:
+				max_packet_size = 16;
+				break;
+			case OTG_DIEPCTL0_MPSIZ_8:
+				max_packet_size = 8;
+				break;
+		}
+		if(len > max_packet_size)
+			packet_count = len / max_packet_size + ( (len % max_packet_size) ? 1 : 0);
+		else
+			packet_count = 1;
+		printf("    packet_count %d\r\n", packet_count);
+		printf("    max_packet_size %d\r\n", max_packet_size);
+		if(packet_count > 3) {
+			printf("  Invalid data\r\n");
+			while(true);
+		}
+		// XFRSIZ is set at otgfs_usb_endpoint_init_on_enumeration_completion
+		REBASE(OTG_DIEPCTL0) = (packet_count << 19);
+	} else {
+		printf("TODO OTG_DIEPCTLx\r\n");
+		while(true);
+		max_packet_size = REBASE(OTG_DIEPCTL(addr)) & 0x7FF;
+		packet_count = len / max_packet_size + ( (len % max_packet_size) ? 1 : 0);
+		printf("    packet_count %d\r\n", packet_count);
+		printf("    max_packet_size %d\r\n", max_packet_size);
+		// REBASE(OTG_DIEPTSIZ(addr)) = 
 	}
+	// 2. Program the OTG_FS_DIEPCTLx register with the endpoint characteristics
+	// and set the CNAK and EPENA (Endpoint Enable) bits.
+	REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_EPENA | OTG_DIEPCTL0_CNAK;
+	// 3. When transmitting non-zero length data packet, the application must
+	// poll the OTG_FS_DTXFSTSx register (where x is the FIFO number associated
+	// with that endpoint) to determine whether there is enough space in the
+	// data FIFO. The application can optionally use TXFE (in OTG_FS_DIEPINTx)
+	// before writing the data.
+	// TODO this is capped to 512 works (2k) length, refactor?
+	if(packet_count) {
+		while(true) {
+			uint16_t words_available, words_needed;
 
-	/* Enable endpoint for transmission. */
-	REBASE(OTG_DIEPTSIZ(addr)) = OTG_DIEPSIZ0_PKTCNT | len;
-	REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_EPENA |
-					 OTG_DIEPCTL0_CNAK;
+			words_available = REBASE(OTG_DTXFSTS(addr)) & 0xFFFF;
+			words_needed = (packet_count * max_packet_size) / sizeof(uint32_t);
 
-	/* Copy buffer to endpoint FIFO, note - memcpy does not work.
-	 * ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
-	#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
-	for (i = len; i > 0; i -= 4) {
-		REBASE(OTG_FIFO(addr)) = *buf32++;
-	}
-	#endif /* defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__) */
+			printf("    words_available %d\r\n", words_available);
+			if(words_available >= words_needed){
+				printf("      can fit %d words\r\n", words_needed);
+				break;
+			}
+		}
 
-	#if defined(__ARM_ARCH_6M__)
-	/* Take care of word-aligned and non-word-aligned buffers */
-	if (((uint32_t)buf8 & 0x3) == 0) {
-		for (i = len; i > 0; i -= 4) {
+		for (int i = len; i > 0; i -= 4) {
 			REBASE(OTG_FIFO(addr)) = *buf32++;
 		}
-	} else {
-		for (i = len; i > 0; i -= 4) {
-			memcpy(&word32, buf8, 4);
-			REBASE(OTG_FIFO(addr)) = word32;
-			buf8 += 4;
-		}
 	}
-	#endif /* defined(__ARM_ARCH_6M__) */
-
 	return len;
 }
 
@@ -517,7 +555,8 @@ static void otgfs_usb_endpoint_init_on_usb_reset(void) {
 	//   – Program the OTG_FS_TX0FSIZ register (depending on the FIFO number
 	//     chosen) to be able to transmit control IN data. At a minimum, this
 	//     must be equal to 1 max packet size of control endpoint 0.
-	// TODO https://github.com/wookey-project/driver-stm32f4xx-usb/blob/master/stm32f4xx_usb_fs.c#L1216
+	REBASE(OTG_DIEPTXF(0)) = ((_usbd_dev.driver->rx_fifo_size / 4) << 16)
+		| _usbd_dev.driver->rx_fifo_size;
 	// 4. Program the following fields in the endpoint-specific registers for
 	//   control OUT endpoint 0 to receive a SETUP packet
 	//   – STUPCNT = 3 in OTG_FS_DOEPTSIZ0 (to receive up to 3 back-to-back
@@ -539,6 +578,7 @@ static void otgfs_usb_endpoint_init_on_enumeration_completion(void) {
 	//
 	// 1. On the Enumeration Done interrupt (ENUMDNE in OTG_FS_GINTSTS), read
 	// the OTG_FS_DSTS register to determine the enumeration speed.
+	// SKIP
 	// 2. Program the MPSIZ field in OTG_FS_DIEPCTL0 to set the maximum packet
 	// size. This step configures control endpoint 0. The maximum packet size
 	// for a control endpoint depends on the enumeration speed.
@@ -598,7 +638,7 @@ static void otgfs_usb_setup_and_out_data_transfers(usbd_device *usbd_dev) {
 		//      These data indicate that the global OUT NAK bit has taken effect.
 		case OTG_GRXSTSP_PKTSTS_GOUTNAK:
 			printf("      OTG_GRXSTSP_PKTSTS_GOUTNAK\r\n");
-			printf("  TODO\r\n");
+			printf("  TODO OTG_GRXSTSP_PKTSTS_GOUTNAK\r\n");
 			while(true);
 			break;
 		// 	  b) SETUP packet pattern:
@@ -633,8 +673,7 @@ static void otgfs_usb_setup_and_out_data_transfers(usbd_device *usbd_dev) {
 		//      the specified control OUT endpoint.
 		case OTG_GRXSTSP_PKTSTS_SETUP_COMP:
 			printf("      OTG_GRXSTSP_PKTSTS_SETUP_COMP\r\n");
-			printf("  TODO\r\n");
-			while(true);
+			usbd_dev->user_callback_ctr[endpoint_number][USB_TRANSACTION_SETUP] (usbd_dev, endpoint_number);
 			break;
 		//    d) Data OUT packet pattern:
 		//      PKTSTS = DataOUT,
@@ -643,7 +682,7 @@ static void otgfs_usb_setup_and_out_data_transfers(usbd_device *usbd_dev) {
 		//      EPNUM = EPNUM on which the packet was received,
 		case OTG_GRXSTSP_PKTSTS_OUT:
 			printf("      OTG_GRXSTSP_PKTSTS_OUT\r\n");
-			printf("  TODO\r\n");
+			printf("  TODO OTG_GRXSTSP_PKTSTS_OUT\r\n");
 			while(true);
 			break;
 		//    e) Data transfer completed pattern:
@@ -657,7 +696,7 @@ static void otgfs_usb_setup_and_out_data_transfers(usbd_device *usbd_dev) {
 		//      specified OUT endpoint.
 		case OTG_GRXSTSP_PKTSTS_OUT_COMP:
 			printf("      OTG_GRXSTSP_PKTSTS_OUT_COMP\r\n");
-			printf("  TODO\r\n");
+			printf("  TODO OTG_GRXSTSP_PKTSTS_OUT_COMP\r\n");
 			while(true);
 			break;
 	}
@@ -672,7 +711,8 @@ static void otgfs_usb_setup_and_out_data_transfers(usbd_device *usbd_dev) {
 static void otgfs_usb_flush_txfifo(usbd_device *usbd_dev, int ep) {
 	(void)usbd_dev;
 	printf("otgfs_usb_flush_txfifo()\r\n");
-	printf("  TODO\r\n");
+	printf("  TODO otgfs_usb_flush_txfifo\r\n");
+
 	while(true);
 	return;
 	uint32_t fifo;
@@ -728,10 +768,10 @@ static void otgfs_usb_poll(usbd_device *usbd_dev) {
 		printf("  OTG_GINTSTS_ENUMDNE\r\n");
 		otgfs_usb_endpoint_init_on_enumeration_completion();
 		// _usbd_dev->driver->set_address(usbd_dev, 0);
+		OTG_FS_GINTSTS |= OTG_GINTSTS_ENUMDNE;
 		if (usbd_dev->user_callback_reset) {
 			usbd_dev->user_callback_reset();
 		}
-		OTG_FS_GINTSTS |= OTG_GINTSTS_ENUMDNE;
 		return;
 	}
 
@@ -874,7 +914,7 @@ static void otgfs_usb_disconnect(usbd_device *usbd_dev, bool disconnected) {
 	(void)disconnected;
 	printf("otgfs_usb_disconnect()\r\n");
 
-	printf("  TODO\r\n");
+	printf("  TODO otgfs_usb_disconnect\r\n");
 	while(true);
 
 	if (disconnected) {
